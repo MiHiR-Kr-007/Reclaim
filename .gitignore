@@ -1,0 +1,9 @@
+venv/
+env/
+
+reclaim.db
+
+__pycache__/
+*.pyc
+
+.env
