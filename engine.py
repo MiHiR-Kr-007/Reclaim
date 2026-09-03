@@ -5,7 +5,8 @@ ERROR_MAPPING = {
     "payment_timed_out": FailureCategory.GATEWAY_TIMEOUT.value,
     "authentication_failed": FailureCategory.AUTH_FAILED.value,
     "card_expired": FailureCategory.CARD_EXPIRED.value,
-    "mandate_revoked": FailureCategory.MANDATE_REVOKED.value
+    "mandate_revoked": FailureCategory.MANDATE_REVOKED.value,
+    "invoice_past_due": FailureCategory.INVOICE_OVERDUE.value
 }
 
 def diagnose_failure(error_reason: str) -> str:

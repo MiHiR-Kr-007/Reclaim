@@ -12,5 +12,8 @@ def determine_intervention(category: str, attempt_number: int) -> dict:
             
     elif category == FailureCategory.AUTH_FAILED.value:
         return {"action": "request_reauthentication", "channel": "email"}
+
+    elif category == FailureCategory.INVOICE_OVERDUE.value:
+        return {"action": "request_promise_to_pay", "channel": "email"}
         
     return {"action": "escalate_to_human", "channel": "none"}

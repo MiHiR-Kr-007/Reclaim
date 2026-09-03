@@ -23,6 +23,7 @@ class FailureCategory(str, Enum):
     AUTH_FAILED = "AUTH_FAILED"
     CARD_EXPIRED = "CARD_EXPIRED"
     MANDATE_REVOKED = "MANDATE_REVOKED"
+    INVOICE_OVERDUE = "INVOICE_OVERDUE" 
     UNKNOWN = "UNKNOWN"
 
 class RecoveryCase(Base):
