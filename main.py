@@ -6,6 +6,7 @@ from policy import determine_intervention
 from compliance import ComplianceGuard
 from adapters import MockSmsAdapter, RazorpayRetryAdapter
 from simulator import BatchSimulator
+from metrics import calculate_metrics
 
 app = FastAPI()
 sms_adapter = MockSmsAdapter()
@@ -74,3 +75,12 @@ def simulate_batch(batch_size: int = 20, db: Session = Depends()):
         "message": f"Processed {batch_size} synthetic events",
         "results": results
     }
+
+@app.get("/metrics")
+def get_metrics(db: Session = Depends()):
+    return calculate_metrics(db)
+
+@app.get("/cases")
+def get_all_cases(db: Session = Depends()):
+    cases = db.query(RecoveryCase).all()
+    return cases
