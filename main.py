@@ -43,6 +43,7 @@ def process_recovery_event(event: dict, db: Session) -> dict:
     
     # 5. Execute or Block
     if is_allowed:
+        transition_state(case, CaseState.INTERVENTION_SCHEDULED)
         if intervention["channel"] in ["email", "mock_sms"]:
             sms_adapter.send(case.id, "Your payment failed. Please update your card.")
         transition_state(case, CaseState.INTERVENTION_SENT)
@@ -59,11 +60,11 @@ def process_recovery_event(event: dict, db: Session) -> dict:
     }
 
 @app.post("/webhooks/razorpay")
-def receive_webhook(event: dict, db: Session = Depends()):
+def receive_webhook(event: dict, db: Session = Depends(get_db)):
     return process_recovery_event(event, db)
 
 @app.post("/simulate/batch")
-def simulate_batch(batch_size: int = 20, db: Session = Depends()):
+def simulate_batch(batch_size: int = 20, db: Session = Depends(get_db)):
     events = BatchSimulator.generate(n=batch_size)
     results = []
     
@@ -76,11 +77,39 @@ def simulate_batch(batch_size: int = 20, db: Session = Depends()):
         "results": results
     }
 
+@app.post("/simulate/recover")
+def simulate_recover(recovery_rate: float = 0.4, db: Session = Depends(get_db)):
+    import random
+    from datetime import datetime
+    
+    # Find cases that received an intervention
+    eligible_cases = db.query(RecoveryCase).filter(
+        RecoveryCase.state == CaseState.INTERVENTION_SENT.value
+    ).all()
+    
+    recovered_count = 0
+    recovered_amount = 0
+    
+    for case in eligible_cases:
+        if random.random() < recovery_rate:
+            transition_state(case, CaseState.AWAITING_OUTCOME)
+            transition_state(case, CaseState.RECOVERED)
+            case.recovered_at = datetime.utcnow()
+            case.attempts += 1
+            recovered_count += 1
+            recovered_amount += case.amount_paise
+            
+    db.commit()
+    return {
+        "message": f"Simulated recovery for {recovered_count} cases.",
+        "rupees_recovered": recovered_amount / 100
+    }
+
 @app.get("/metrics")
-def get_metrics(db: Session = Depends()):
+def get_metrics(db: Session = Depends(get_db)):
     return calculate_metrics(db)
 
 @app.get("/cases")
-def get_all_cases(db: Session = Depends()):
+def get_all_cases(db: Session = Depends(get_db)):
     cases = db.query(RecoveryCase).all()
     return cases

@@ -18,13 +18,25 @@ def get_db():
 db = get_db()
 
 st.markdown("### Control Panel")
-if st.button("Run Batch Simulator (100 Cases)"):
-    with st.spinner("Simulating failed payments through the orchestrator..."):
-        try:
-            requests.post("http://localhost:8000/simulate/batch?batch_size=100")
-            st.success("Batch processed successfully! Engine executed all compliance checks.")
-        except Exception as e:
-            st.error(f"Failed to reach API. Is your FastAPI server running? Error: {e}")
+col_a, col_b = st.columns(2)
+with col_a:
+    if st.button("Run Batch Simulator (100 Cases)"):
+        with st.spinner("Simulating failed payments through the orchestrator..."):
+            try:
+                requests.post("http://localhost:8000/simulate/batch?batch_size=100")
+                st.success("Batch processed successfully! Engine executed all compliance checks.")
+            except Exception as e:
+                st.error(f"Failed to reach API. Is your FastAPI server running? Error: {e}")
+
+with col_b:
+    if st.button("Simulate User Payments (Demo)"):
+        with st.spinner("Simulating users clicking links and paying..."):
+            try:
+                res = requests.post("http://localhost:8000/simulate/recover?recovery_rate=0.4")
+                data = res.json()
+                st.success(f"{data['message']} Recovered ₹{data['rupees_recovered']:,.2f}!")
+            except Exception as e:
+                st.error(f"Failed to reach API. Error: {e}")
 
 st.divider()
 
