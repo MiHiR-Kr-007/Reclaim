@@ -32,7 +32,17 @@ def process_recovery_event(event: dict, db: Session) -> dict:
     db.commit()
 
     # 3. Policy Decision
-    intervention = determine_intervention(case.category, attempt_number=1) 
+    intervention = determine_intervention(case.category, attempt_number=case.attempts + 1, amount=case.amount_paise, error_reason=error_reason, use_ai=True) 
+    
+    # Log AI Reasoning to Audit Trail
+    if "reasoning" in intervention:
+        db.add(DecisionRecord(
+            case_id=case.id,
+            actor="ai_agent",
+            rule_name="HybridOptimizer",
+            allowed=True,
+            reason=intervention["reasoning"]
+        ))
     
     # 4. Compliance Guard
     compliance_decisions = ComplianceGuard.evaluate_all(case, intervention["action"])
@@ -44,8 +54,8 @@ def process_recovery_event(event: dict, db: Session) -> dict:
     # 5. Execute or Block
     if is_allowed:
         transition_state(case, CaseState.INTERVENTION_SCHEDULED)
-        if intervention["channel"] in ["email", "mock_sms"]:
-            sms_adapter.send(case.id, "Your payment failed. Please update your card.")
+        if intervention["channel"] in ["email", "mock_sms", "hinglish_voice"]:
+            sms_adapter.send(case.id, intervention.get("message", "Your payment failed. Please update your card."))
         transition_state(case, CaseState.INTERVENTION_SENT)
     else:
         transition_state(case, CaseState.ESCALATED)
