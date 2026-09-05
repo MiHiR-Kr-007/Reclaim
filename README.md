@@ -1,68 +1,78 @@
-# Reclaim: AI Revenue Recovery Engine
+# Reclaim: Hybrid Agentic Revenue Recovery Engine 
 
-Most recovery bots are optimized to maximize contact attempts. Reclaim is optimized to recover revenue with the fewest, best-timed, fully compliant touches—and can prove, after the fact, exactly why it acted or didn't.
+**Built for the Razorpay Buildathon: AI Revenue Recovery Track**
 
-## The AI Boundary
+Reclaim is an intelligent, RBI-compliant revenue recovery engine. It detects payments at risk (failed subscriptions, checkout drop-offs, overdue B2B invoices), uses an LLM Agent to strategize the best recovery action, and executes a bounded workflow—all while proving exactly *why* it acted via an immutable audit trail.
 
-Allowing an LLM to make financial or compliance decisions creates significant liability. Therefore, the AI is strictly bounded:
+---
 
-- **AI DOES NOT** decide whether or when to retry a payment.
-- **AI DOES NOT** evaluate compliance rules.
-- **AI IS ONLY USED FOR:**
-  1. Fallback classification of ambiguous error strings.
-  2. Drafting contextual outreach messages.
-  3. Narrating immutable audit logs into plain English for the dashboard.
+## The Problem
+Revenue loss rarely happens in one clean step. A payment degrades due to insufficient funds, an expired mandate, or a gateway timeout. 
+Most standard recovery tools use brute-force heuristic retries. This leads to two massive problems:
+1. **Low Conversion:** Blasting generic "Your payment failed" emails ignores context.
+2. **Compliance Risk:** Blindly retrying cards can violate RBI regulations (e.g., the ₹15,000 AFA limit or the 24-hour pre-debit notice mandate).
 
-## Grounded Compliance Guard
+## Our Solution: The Bounded Hybrid Agent
+Reclaim solves this by marrying **Agentic AI** with a **Deterministic Compliance State Machine**. 
 
-Standard recovery engines can aggressively retry failed payments. Reclaim evaluates every action against applicable RBI e-mandate rules before execution:
+### 1. The Revenue Recovery Strategist (AI Layer)
+When a payment fails, Reclaim doesn't just guess. It feeds the failure context (Category, Error string, Attempt history, Amount) into an LLM Agent (powered by Groq). The Agent acts as a Revenue Recovery Strategist to:
+- Choose the optimal recovery action (e.g., `silent_retry`, `request_promise_to_pay`).
+- Draft hyper-personalized, context-aware outreach messages (e.g., Hinglish messaging, empathy-driven prompts).
 
-- **Pre-Debit Notice:** Blocks recurring debits unless the required advance notice has been sent.
-- **AFA Threshold:** Blocks silent retries for amounts above ₹15,000, enforcing fresh authentication where required.
-- **Max Attempts & Cooldown:** Enforces responsible collection limits and cooldown periods to prevent excessive or repetitive recovery attempts.
+### 2. The RBI Compliance Guard (Safety Layer)
+You cannot give an LLM unchecked access to financial workflows. Every decision the AI makes is intercepted by our Compliance Guard before execution. 
+It evaluates the AI's action against hardcoded RBI rules:
+- **Pre-Debit Notice:** Blocks recurring debits unless the 24h advance notice has been sent.
+- **AFA Threshold:** Blocks silent retries for amounts > ₹15,000, enforcing fresh authentication.
+- **Max Attempts & Cooldown:** Enforces responsible collection limits.
 
-Every evaluation—whether passed or failed—creates an immutable `DecisionRecord` for complete auditability.
+### 3. Immutable Audit Trail
+Every single AI decision and Compliance Guard evaluation creates a `DecisionRecord`. Reclaim doesn't just recover money; it proves exactly *why* it did so in a plain-English, fully auditable ledger.
 
-## Architecture Justification
+---
 
-**Tech Stack:** Python, FastAPI, SQLite, Streamlit.
+## 🛠 Tech Stack & Architecture Justification
+**Stack:** Python, FastAPI, SQLite, Streamlit, Groq LLM API, Razorpay API.
 
-### Why a Modular Monolith?
+**Why a Modular Monolith?**
+We deliberately avoided microservices and complex infrastructure. A single FastAPI process backed by SQLite allows for maximum velocity, zero-cost local deployment, and high reliability. The architecture is modular *internally*, allowing new adapters (Twilio, Razorpay) and AI models to be plugged in effortlessly.
 
-We deliberately avoided microservices, message queues, and Kubernetes. At this scale, there is no need for independent service scaling or complex team boundaries.
+---
 
-A single FastAPI process backed by SQLite is the deliberately correct engineering choice for:
+## Key Features Demonstrated
+- **Agentic Decision Making:** Contextual recovery logic vs. static if/else blocks.
+- **Razorpay Integration:** Real test-mode authentication and payload construction in the `RazorpayRetryAdapter`.
+- **Batch Simulator:** Generates synthetic failures matching real-world distributions (e.g., 35% insufficient funds, 20% timeouts) and pushes them through the real engine.
+- **Live Recovery Dashboard:** A Streamlit app showing live Recovery Rates, ₹ Recovered, Compliance Blocks, and a Deep Dive AI Audit Trail.
 
-- Fast development and iteration
-- Low operational complexity
-- High reliability
-- Zero-cost local deployment
-- Straightforward debugging and observability
+---
 
-The architecture remains modular internally, allowing new policies and event types to be added without introducing unnecessary infrastructure complexity.
+## 💻 How to Run Locally
 
-### B2B Extensibility
+1. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-To demonstrate the modularity of the state machine, Reclaim was extended to support B2B `InvoiceOverdueEvent` scenarios.
+2. **Configure Environment:**
+   Create a `.env` file in the root directory:
+   ```env
+   GROQ_API_KEY=your_groq_key
+   RAZORPAY_KEY_ID=your_razorpay_test_key_id
+   RAZORPAY_KEY_SECRET=your_razorpay_test_key_secret
+   ```
 
-By adding a **Promise-to-Pay policy strategy**, the new B2B workflow reuses the entire core engine and compliance guard without modifying the underlying recovery infrastructure.
+3. **Start the Core Engine:**
+   ```bash
+   uvicorn main:app --reload
+   ```
 
-This demonstrates that the architecture can support additional revenue-recovery use cases while keeping the core decision and compliance layers consistent.
+4. **Launch the Dashboard (in a new terminal):**
+   ```bash
+   streamlit run dashboard.py
+   ```
 
-### Batch Simulator vs. Live Test
-
-The system includes a batch simulator that generates events using a realistic failure distribution, such as:
-
-- 35% insufficient funds
-- 20% payment timeouts
-- Other realistic payment failure categories
-
-These synthetic events are processed through the **exact same orchestrator** used by live webhooks.
-
-This ensures that simulator results are not based on a separate or simplified code path, allowing the resulting recovery metrics to accurately represent how the production workflow behaves.
-
-## How to Run
-1. `pip install -r requirements.txt`
-2. Configure `.env` with Groq and Razorpay test keys.
-3. Start the engine: `uvicorn main:app --reload`
-4. Start the dashboard: `streamlit run dashboard.py`
+5. **Run the Demo:**
+   - In the Streamlit dashboard, click **Run Batch Simulator** to watch the AI process 100 failed payments in real-time.
+   - Click **Simulate User Payments** to watch the Recovery Rate skyrocket!
