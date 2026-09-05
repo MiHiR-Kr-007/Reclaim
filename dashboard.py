@@ -20,10 +20,10 @@ db = get_db()
 st.markdown("### Control Panel")
 col_a, col_b = st.columns(2)
 with col_a:
-    if st.button("Run Batch Simulator (100 Cases)"):
+    if st.button("Run Batch Simulator (20 Cases)"):
         with st.spinner("Simulating failed payments through the orchestrator..."):
             try:
-                requests.post("http://localhost:8000/simulate/batch?batch_size=100")
+                requests.post("http://localhost:8000/simulate/batch?batch_size=20")
                 st.success("Batch processed successfully! Engine executed all compliance checks.")
             except Exception as e:
                 st.error(f"Failed to reach API. Is your FastAPI server running? Error: {e}")
@@ -62,7 +62,7 @@ if cases:
         "Attempts": c.attempts,
         "Amount (₹)": c.amount_paise / 100
     } for c in cases]
-    st.dataframe(pd.DataFrame(case_data), use_container_width=True)
+    st.dataframe(pd.DataFrame(case_data), width="stretch")
 
 st.divider()
 
@@ -87,4 +87,4 @@ if cases:
             "Reason": r.reason,
             "Timestamp": r.created_at
         } for r in records]
-        st.dataframe(pd.DataFrame(log_data), use_container_width=True)
+        st.dataframe(pd.DataFrame(log_data), width="stretch")
